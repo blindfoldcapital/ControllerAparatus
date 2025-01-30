@@ -2,35 +2,65 @@ const { checkBotStatus } = require("./botStatusChecker");
 
 console.log("🚀 Starting Bot...");
 
+let countingProcess = null;
+let counter = 0;
+
 /**
- * Main loop to keep the bot running unless disabled.
+ * Function to start the number counting process.
  */
-const runBot = async () => {
+const startCounting = () => {
+  if (!countingProcess) {
+    console.log("🔢 Starting Number Counting...");
+    countingProcess = setInterval(() => {
+      counter++;
+      console.log(`📊 Counter: ${counter}`);
+    }, 1000);
+  }
+};
+
+/**
+ * Function to stop the number counting process.
+ */
+const stopCounting = () => {
+  if (countingProcess) {
+    console.log("⏹️ Stopping Number Counting...");
+    clearInterval(countingProcess);
+    countingProcess = null;
+    counter = 0;
+  }
+};
+
+/**
+ * Main loop to monitor bot status and control the number counting process.
+ */
+const monitorBot = async () => {
   try {
     const status = await checkBotStatus();
 
     if (status.isEnabled) {
       console.log("✅ Bot is running...");
+      startCounting(); // Start counting process if bot is enabled
     } else {
-      console.warn("⛔ Bot is disabled by controllers. Exiting...");
-      process.exit(1); // Force exit if bot is disabled
+      console.warn("⛔ Bot is disabled by controllers.");
+      stopCounting(); // Stop counting process if bot is disabled
     }
   } catch (error) {
     console.error("❌ Error in bot execution:", error);
   }
 };
 
-// Run bot status check in an interval
-setInterval(runBot, 5000);
+// Run bot status check every 5 seconds
+setInterval(monitorBot, 5000);
 
 // Prevent the app from exiting
-process.stdin.resume(); // Keeps Node.js process alive
+process.stdin.resume();
 
-// Graceful shutdown handling
+/**
+ * Graceful shutdown handling
+ */
 const handleExit = async () => {
   console.log("⚠️ Attempting to shut down...");
-  
-  // Ensure bot is disabled before exiting
+
   const status = await checkBotStatus();
   if (status.isEnabled) {
     console.warn("⛔ Cannot shut down while bot is enabled!");
@@ -38,6 +68,7 @@ const handleExit = async () => {
   }
 
   console.log("✅ Bot is disabled. Exiting...");
+  stopCounting();
   process.exit(0);
 };
 
